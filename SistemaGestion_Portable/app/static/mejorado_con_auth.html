@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sistema de Suscriptores</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width: 1200px; margin: 20px auto; line-height: 1.5; color:#222; background:#f9f9f9 }
+      h1 { color:#0a4f7a; text-align:center }
+      .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      .user-info { display: flex; align-items: center; gap: 15px; }
+      .user-info span { font-weight: bold; color: #0a4f7a; }
+      .btn-logout { 
+        background: #dc3545; 
+        color: white; 
+        padding: 8px 15px; 
+        border: none; 
+        border-radius: 4px; 
+        cursor: pointer; 
+        font-weight: bold;
+        transition: all 0.3s ease;
+      }
+      .btn-logout:hover { 
+        background: #c82333; 
+        transform: scale(1.05);
+      }
+      .card { background:white; border:1px solid #ddd; padding:20px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 4px rgba(0,0,0,0.1) }
+      .form-group { margin-bottom:15px }
+      label { display:block; margin-bottom:5px; font-weight:bold }
+      input, select, button { 
+        padding:8px; 
+        border:1px solid #ccc; 
+        border-radius:4px; 
+        width:100%; 
+        box-sizing:border-box;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+      }
+      button { background:#0a4f7a; color:white; border:none; cursor:pointer; margin-top:10px }
+      button:hover { background:#084f6a }
+      .result { margin-top:15px; padding:10px; background:#e8f5e8; border:1px solid #4caf50; border-radius:4px; display:none }
+      .error { background:#ffebee; border-color:#f44336 }
+      table { width:100%; border-collapse:collapse; margin-top:15px }
+      th, td { border:1px solid #ddd; padding:8px; text-align:left }
+      th { background:#f2f2f2 }
+      .tabs { display:flex; margin-bottom:20px }
+      .tab { flex:1; padding:10px; background:#ddd; cursor:pointer; text-align:center; border-radius:4px 4px 0 0 }
+      .tab.active { background:#0a4f7a; color:white }
+      .tab-content { display:none }
+      .tab-content.active { display:block }
+      .search-box { margin-bottom:15px; padding:10px; background:#f0f0f0; border-radius:4px }
+      .search-box input { width:300px; display:inline-block }
+      .editable { background:#fff3cd; cursor:pointer; padding:2px 4px; border-radius:2px }
+      .editable:hover { background:#ffeaa7 }
+      .edit-input { width:100%; padding:4px; border:1px solid #007bff; border-radius:2px }
+      .btn-small { padding:4px 8px; font-size:12px; margin:2px }
+      .btn-edit { background:#ff9800 }
+      .btn-save { background:#4caf50 }
+      .btn-cancel { background:#f44336 }
+      .btn-delete { background:#f44336 }
+      .admin-only { background: #28a745; }
+      .role-badge { padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+      .role-admin { background: #dc3545; color: white; }
+      .role-user { background: #28a745; color: white; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Sistema de Gestión de Suscriptores</h1>
+      <div class="user-info">
+        <span id="userName">Cargando...</span>
+        <span id="userRole" class="role-badge"></span>
+        <button onclick="logout()" class="btn-logout">🚪 Cerrar Sesión</button>
+      </div>
+    </div>
+
+    <!-- Botón flotante de cerrar sesión -->
+    <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+      <button onclick="logout()" style="background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+        🚪 Cerrar Sesión
+      </button>
+    </div>
+
+    <div class="tabs" id="mainTabs">
+      <div class="tab active" onclick="showTab('suscriptores')">Suscriptores</div>
+      <div class="tab" onclick="showTab('pagos')">Pagos</div>
+      <div class="tab" onclick="showTab('gastos')">Gastos</div>
+      <div class="tab" onclick="showTab('balance')">Balance</div>
+      <div class="tab admin-only" id="adminTab" onclick="showTab('admin')" style="display:none;">Administración</div>
+    </div>
+
+    <div id="suscriptores" class="tab-content active">
+      <div class="card">
+        <h3>Crear Suscriptor</h3>
+        <form id="form-suscriptor">
+          <div class="form-group">
+            <label>Número de Contrato:</label>
+            <input type="text" id="numero_contrato" required>
+          </div>
+          <div class="form-group">
+            <label>Cédula:</label>
+            <input type="text" id="cedula" required>
+          </div>
+          <div class="form-group">
+            <label>Nombre Completo:</label>
+            <input type="text" id="nombre_completo" required>
+          </div>
+          <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="email" required>
+          </div>
+          <div class="form-group">
+            <label>Teléfono:</label>
+            <input type="text" id="telefono">
+          </div>
+          <div class="form-group">
+            <label>Dirección:</label>
+            <input type="text" id="direccion">
+          </div>
+          <div class="form-group">
+            <label>Fecha de Suscripción:</label>
+            <input type="date" id="fecha_suscripcion" required>
+          </div>
+          <button type="submit">Crear Suscriptor</button>
+        </form>
+        <div id="result-suscriptor" class="result"></div>
+      </div>
+
+      <div class="card">
+        <h3>Listar Suscriptores</h3>
+        <div class="search-box">
+          <input type="text" id="buscar-suscriptor" placeholder="Buscar por nombre, cédula o contrato..." onkeyup="buscarSuscriptores()">
+          <button onclick="listarSuscriptores()" style="width:auto; display:inline-block">🔄 Actualizar</button>
+        </div>
+        <table id="tabla-suscriptores">
+          <thead>
+            <tr><th>ID</th><th>Contrato</th><th>Cédula</th><th>Nombre</th><th>Fecha</th><th>Acciones</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="pagos" class="tab-content">
+      <div class="card">
+        <h3>Registrar Pago</h3>
+        <form id="form-pago">
+          <div class="form-group">
+            <label>ID del Suscriptor:</label>
+            <input type="number" id="buscar-suscriptor-id" placeholder="Escribe ID y presiona Buscar">
+            <button type="button" onclick="buscarPorSuscriptorId()">🔍 Buscar</button>
+          </div>
+          <div class="form-group" id="info-suscriptor" style="display:none; background:#e8f5e8; padding:10px; border-radius:4px; margin-bottom:15px;">
+            <h4>Información del Suscriptor:</h4>
+            <p><strong>Nombre:</strong> <span id="pago_suscriptor_nombre"></span></p>
+            <p><strong>Email:</strong> <span id="pago_suscriptor_email"></span></p>
+            <p><strong>Cédula:</strong> <span id="pago_suscriptor_cedula"></span></p>
+          </div>
+          <div class="form-group">
+            <label>Mes:</label>
+            <select id="mes" required>
+              <option value="">Seleccionar mes</option>
+              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Año:</label>
+            <input type="number" id="anio" min="2000" max="2100" required>
+          </div>
+          <div class="form-group">
+            <label>Fecha de Pago:</label>
+            <input type="date" id="fecha_pago" required>
+          </div>
+          <div class="form-group">
+            <label>Valor:</label>
+            <input type="number" step="0.01" id="valor" required>
+          </div>
+          <div class="form-group">
+            <label>Tipo de Pago:</label>
+            <select id="tipo_pago" required onchange="togglePagoFields()">
+              <option value="">Seleccionar tipo</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="transferencia">Transferencia</option>
+            </select>
+          </div>
+          <div id="campos-efectivo" style="display:none">
+            <div class="form-group">
+              <label>Monto en Efectivo:</label>
+              <input type="number" step="0.01" id="monto_efectivo">
+            </div>
+          </div>
+          <div id="campos-transferencia" style="display:none">
+            <div class="form-group">
+              <label>Entidad Bancaria:</label>
+              <input type="text" id="entidad_bancaria">
+            </div>
+            <div class="form-group">
+              <label>Nombre del Transferente:</label>
+              <input type="text" id="nombre_transferente">
+            </div>
+          </div>
+          <button type="submit">Registrar Pago</button>
+        </form>
+        <div id="result-pago" class="result"></div>
+      </div>
+
+      <div class="card">
+        <h3>Listar Pagos</h3>
+        <div class="search-box">
+          <input type="text" id="buscar-pago" placeholder="Buscar pagos..." onkeyup="buscarPagos()">
+          <button onclick="listarPagos()" style="width:auto; display:inline-block">🔄 Actualizar</button>
+        </div>
+        <table id="tabla-pagos">
+          <thead>
+            <tr><th>ID</th><th>ID Suscriptor</th><th>Mes</th><th>Año</th><th>Fecha</th><th>Valor</th><th>Tipo</th><th>Acciones</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="gastos" class="tab-content">
+      <div class="card">
+        <h3>Registrar Gasto</h3>
+        <form id="form-gasto">
+          <div class="form-group">
+            <label>Tipo de Gasto:</label>
+            <select id="tipo_gasto" required>
+              <option value="">Seleccionar tipo</option>
+              <option value="compra">Compra</option>
+              <option value="pago_trabajador">Pago a Trabajador</option>
+              <option value="servicio">Servicio</option>
+              <option value="alquiler">Alquiler</option>
+              <option value="otros">Otros</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ID del Suscriptor:</label>
+            <input type="number" id="pago_suscriptor_id" required readonly>
+          </div>
+          <div class="form-group">
+            <label>Valor:</label>
+            <input type="number" step="0.01" id="valor_gasto" required>
+          </div>
+          <div class="form-group">
+            <label>Descripción:</label>
+            <input type="text" id="descripcion" required>
+          </div>
+          <div class="form-group">
+          <div class="form-group">
+            <label>Fecha:</label>
+            <input type="date" id="fecha_gasto" required>
+          </div>
+          <div class="form-group">
+            <label>Lugar de Compra:</label>
+            <input type="text" id="lugar_compra">
+          </div>
+          <div class="form-group">
+            <label>Motivo:</label>
+            <input type="text" id="motivo">
+          </div>
+          <button type="submit">Registrar Gasto</button>
+        </form>
+        <div id="result-gasto" class="result"></div>
+      </div>
+
+      <div class="card">
+        <h3>Listar Gastos</h3>
+        <div class="search-box">
+          <input type="text" id="buscar-gasto" placeholder="Buscar gastos..." onkeyup="buscarGastos()">
+          <button onclick="listarGastos()" style="width:auto; display:inline-block">🔄 Actualizar</button>
+        </div>
+        <table id="tabla-gastos">
+          <thead>
+            <tr><th>ID</th><th>Tipo</th><th>Descripción</th><th>Valor</th><th>Fecha</th><th>Lugar</th><th>Acciones</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="balance" class="tab-content">
+      <div class="card">
+        <h3>Balance General</h3>
+        <button onclick="obtenerBalance()">Actualizar Balance</button>
+        <div id="balance-result"></div>
+      </div>
+
+      <div class="card">
+        <h3>Resumen de Ingresos</h3>
+        <table id="tabla-ingresos">
+          <thead>
+            <tr><th>ID</th><th>Monto</th><th>Fecha</th><th>Origen</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Resumen de Gastos</h3>
+        <table id="tabla-gastos-resumen">
+          <thead>
+            <tr><th>ID</th><th>Tipo</th><th>Descripción</th><th>Valor</th><th>Fecha</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="admin" class="tab-content">
+      <div class="card">
+        <h3>Gestión de Usuarios</h3>
+        <button onclick="listarUsuarios()" class="admin-only">🔄 Actualizar Lista</button>
+        <table id="tabla-usuarios">
+          <thead>
+            <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Fecha Creación</th><th>Acciones</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = window.location.origin;
+      let currentUser = null;
+      let suscriptoresData = [];
+      let pagosData = [];
+      let gastosData = [];
+
+      // Verificar autenticación
+      window.onload = async function() {
+        console.log('Cargando mejorado_con_auth.html');
+        const user = localStorage.getItem('user');
+        console.log('Usuario al cargar mejorado_con_auth:', user);
+        
+        if (!user) {
+          console.log('No hay usuario, redirigiendo a login');
+          window.location.href = '/ui/login.html';
+          return;
+        }
+
+        try {
+          currentUser = JSON.parse(user);
+          console.log('Usuario verificado:', currentUser);
+          
+          // Verificar que los elementos existan antes de asignar
+          const userNameElement = document.getElementById('userName');
+          const userRoleElement = document.getElementById('userRole');
+          
+          if (userNameElement) {
+            userNameElement.textContent = currentUser.nombre_completo;
+          }
+          if (userRoleElement) {
+            userRoleElement.textContent = currentUser.rol === 'admin' ? 'Administrador' : 'Usuario';
+            userRoleElement.className = `role-badge role-${currentUser.rol}`;
+          }
+          
+          // Cargar datos iniciales solo una vez
+          if (!window.dataLoaded) {
+            console.log('Cargando datos iniciales...');
+            window.dataLoaded = true;
+            listarSuscriptores();
+            listarPagos();
+            listarGastos();
+            obtenerBalance();
+          }
+        } catch (error) {
+          console.error('Error verificando usuario:', error);
+          localStorage.removeItem('user');
+          window.location.href = '/ui/login.html';
+        }
+      };
+
+      function updateUserInfo() {
+        const userNameElement = document.getElementById('userName');
+        const roleElement = document.getElementById('userRole');
+        
+        if (userNameElement && currentUser) {
+          userNameElement.textContent = currentUser.nombre_completo;
+        }
+        if (roleElement && currentUser) {
+          roleElement.textContent = currentUser.rol === 'admin' ? 'Administrador' : 'Usuario';
+          roleElement.className = `role-badge role-${currentUser.rol}`;
+        }
+      }
+
+      function logout() {
+        if (confirm('¿Está seguro de que desea cerrar sesión?')) {
+          console.log('Cerrando sesión manualmente');
+          localStorage.removeItem('user');
+          window.location.href = '/ui/login.html';
+        }
+      }
+
+      function getAuthHeaders() {
+        const user = localStorage.getItem('user');
+        console.log('Usuario obtenido de localStorage:', user);
+        return { 'Content-Type': 'application/json' };
+      }
+
+      function showTab(tabName) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+        document.getElementById(tabName).classList.add('active');
+        
+        // Cargar datos cuando se cambia de pestaña
+        if (tabName === 'suscriptores') listarSuscriptores();
+        if (tabName === 'pagos') listarPagos();
+        if (tabName === 'gastos') listarGastos();
+        if (tabName === 'balance') obtenerBalance();
+        if (tabName === 'admin' && currentUser.rol === 'admin') listarUsuarios();
+      }
+
+      // Funciones de administración de usuarios
+      async function listarUsuarios() {
+        if (currentUser.rol !== 'admin') return;
+        
+        try {
+          const response = await fetch(`${API_BASE}/auth/users`, {
+            headers: getAuthHeaders()
+          });
+          const usuarios = await response.json();
+          const tbody = document.querySelector('#tabla-usuarios tbody');
+          tbody.innerHTML = '';
+          usuarios.forEach(u => {
+            const row = `
+              <tr>
+                <td>${u.id}</td>
+                <td>${u.nombre_completo}</td>
+                <td>${u.email}</td>
+                <td>
+                  <span class="role-badge role-${u.rol}">${u.rol === 'admin' ? 'Administrador' : 'Usuario'}</span>
+                </td>
+                <td>${u.fecha_creacion}</td>
+                <td>
+                  ${u.rol !== 'admin' ? `
+                    <select onchange="cambiarRol(${u.id}, this.value)" style="padding:4px; border-radius:2px;">
+                      <option value="user" ${u.rol === 'user' ? 'selected' : ''}>Usuario</option>
+                      <option value="admin" ${u.rol === 'admin' ? 'selected' : ''}>Administrador</option>
+                    </select>
+                  ` : 'N/A'}
+                </td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+
+      async function cambiarRol(userId, newRole) {
+        if (currentUser.rol !== 'admin') return;
+        
+        try {
+          const response = await fetch(`${API_BASE}/auth/users/${userId}/role`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ rol: newRole })
+          });
+
+          if (response.ok) {
+            alert('Rol actualizado exitosamente');
+            listarUsuarios();
+          } else {
+            const error = await response.json();
+            alert(`Error: ${error.detail || 'Error desconocido'}`);
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error al actualizar rol');
+        }
+      }
+
+      // Resto de funciones (mantener las mismas que antes pero con autenticación)
+      function togglePagoFields() {
+        const tipo = document.getElementById('tipo_pago').value;
+        document.getElementById('campos-efectivo').style.display = tipo === 'efectivo' ? 'block' : 'none';
+        document.getElementById('campos-transferencia').style.display = tipo === 'transferencia' ? 'block' : 'none';
+      }
+
+      // Funciones de búsqueda
+      function buscarSuscriptores() {
+        const texto = document.getElementById('buscar-suscriptor').value.toLowerCase();
+        const filtrados = suscriptoresData.filter(s => 
+          s.nombre_completo.toLowerCase().includes(texto) ||
+          s.cedula.toLowerCase().includes(texto) ||
+          s.numero_contrato.toLowerCase().includes(texto)
+        );
+        mostrarSuscriptores(filtrados);
+      }
+
+      function buscarPagos() {
+        const texto = document.getElementById('buscar-pago').value.toLowerCase();
+        const filtrados = pagosData.filter(p => 
+          p.suscriptor_id.toString().includes(texto) ||
+          p.tipo_pago.toLowerCase().includes(texto) ||
+          p.valor.toString().includes(texto)
+        );
+        mostrarPagos(filtrados);
+      }
+
+      function buscarGastos() {
+        const texto = document.getElementById('buscar-gasto').value.toLowerCase();
+        const filtrados = gastosData.filter(g => 
+          g.tipo_gasto.toLowerCase().includes(texto) ||
+          g.descripcion.toLowerCase().includes(texto) ||
+          g.valor.toString().includes(texto)
+        );
+        mostrarGastos(filtrados);
+      }
+
+      // Funciones de edición inline
+      function hacerEditable(celda, id, campo, tipo = 'text') {
+        const valorActual = celda.textContent;
+        celda.innerHTML = `<input type="${tipo}" class="edit-input" value="${valorActual}" onblur="guardarEdicion(${id}, '${campo}', this.value)" onkeypress="if(event.key==='Enter') this.blur()">`;
+        celda.querySelector('input').focus();
+      }
+
+      async function guardarEdicion(id, campo, valor) {
+        try {
+          const response = await fetch(`${API_BASE}/suscriptores/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ [campo]: valor })
+          });
+          if (response.ok) {
+            listarSuscriptores();
+          } else {
+            alert('Error al actualizar');
+          }
+        } catch (error) {
+          alert('Error al actualizar');
+        }
+      }
+
+      // Formularios (con autenticación)
+      document.getElementById('form-suscriptor').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+          numero_contrato: document.getElementById('numero_contrato').value,
+          cedula: document.getElementById('cedula').value,
+          nombre_completo: document.getElementById('nombre_completo').value,
+          fecha_suscripcion: document.getElementById('fecha_suscripcion').value
+        };
+        try {
+          const response = await fetch(`${API_BASE}/suscriptores`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+          });
+          const result = await response.json();
+          const resultDiv = document.getElementById('result-suscriptor');
+          if (response.ok) {
+            resultDiv.textContent = 'Suscriptor creado exitosamente!';
+            resultDiv.classList.remove('error');
+            document.getElementById('form-suscriptor').reset();
+            listarSuscriptores();
+          } else {
+            resultDiv.textContent = `Error: ${result.detail || 'Error desconocido'}`;
+            resultDiv.classList.add('error');
+          }
+          resultDiv.style.display = 'block';
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      });
+
+      document.getElementById('form-pago').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tipo = document.getElementById('tipo_pago').value;
+        const data = {
+          suscriptor_id: parseInt(document.getElementById('pago_suscriptor_id').value),
+          mes: parseInt(document.getElementById('mes').value),
+          anio: parseInt(document.getElementById('anio').value),
+          fecha_pago: document.getElementById('fecha_pago').value,
+          valor: parseFloat(document.getElementById('valor').value),
+          tipo_pago: tipo
+        };
+        if (tipo === 'efectivo') {
+          data.monto_efectivo = parseFloat(document.getElementById('monto_efectivo').value);
+        } else if (tipo === 'transferencia') {
+          data.entidad_bancaria = document.getElementById('entidad_bancaria').value;
+          data.nombre_transferente = document.getElementById('nombre_transferente').value;
+        }
+        try {
+          const response = await fetch(`${API_BASE}/pagos`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+          });
+          const result = await response.json();
+          const resultDiv = document.getElementById('result-pago');
+          if (response.ok) {
+            resultDiv.textContent = 'Pago registrado exitosamente!';
+            resultDiv.classList.remove('error');
+            document.getElementById('form-pago').reset();
+            listarPagos();
+          } else {
+            resultDiv.textContent = `Error: ${result.detail || 'Error desconocido'}`;
+            resultDiv.classList.add('error');
+          }
+          resultDiv.style.display = 'block';
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      });
+
+      document.getElementById('form-gasto').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+          tipo_gasto: document.getElementById('tipo_gasto').value,
+          descripcion: document.getElementById('descripcion').value,
+          valor: parseFloat(document.getElementById('valor_gasto').value),
+          fecha: document.getElementById('fecha_gasto').value,
+          lugar_compra: document.getElementById('lugar_compra').value,
+          motivo: document.getElementById('motivo').value
+        };
+        try {
+          const response = await fetch(`${API_BASE}/gastos`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+          });
+          const result = await response.json();
+          const resultDiv = document.getElementById('result-gasto');
+          if (response.ok) {
+            resultDiv.textContent = 'Gasto registrado exitosamente!';
+            resultDiv.classList.remove('error');
+            document.getElementById('form-gasto').reset();
+            listarGastos();
+          } else {
+            resultDiv.textContent = `Error: ${result.detail || 'Error desconocido'}`;
+            resultDiv.classList.add('error');
+          }
+          resultDiv.style.display = 'block';
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      });
+
+      // Funciones de listado (con autenticación)
+      async function listarSuscriptores() {
+        try {
+          const response = await fetch(`${API_BASE}/suscriptores/`, {
+            headers: getAuthHeaders()
+          });
+          suscriptoresData = await response.json();
+          mostrarSuscriptores(suscriptoresData);
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+
+      async function buscarSuscriptores() {
+        const query = document.getElementById('buscar-suscriptor').value;
+        if (query) {
+          try {
+            const response = await fetch(`${API_BASE}/suscriptores/buscar?q=${encodeURIComponent(query)}`, {
+              headers: getAuthHeaders()
+            });
+            suscriptoresData = await response.json();
+            mostrarSuscriptores(suscriptoresData);
+          } catch (error) {
+            console.error('Error:', error);
+          }
+        }
+      }
+
+      function mostrarSuscriptores(suscriptores) {
+        const tbody = document.querySelector('#tabla-suscriptores tbody');
+        tbody.innerHTML = '';
+        suscriptores.forEach(s => {
+          const row = `
+            <tr>
+              <td>${s.id}</td>
+              <td class="editable" onclick="hacerEditable(this, ${s.id}, 'numero_contrato')">${s.numero_contrato}</td>
+              <td class="editable" onclick="hacerEditable(this, ${s.id}, 'cedula')">${s.cedula}</td>
+              <td class="editable" onclick="hacerEditable(this, ${s.id}, 'nombre_completo')">${s.nombre_completo}</td>
+              <td class="editable" onclick="hacerEditable(this, ${s.id}, 'email')">${s.email}</td>
+              <td class="editable" onclick="hacerEditable(this, ${s.id}, 'telefono')">${s.telefono}</td>
+              <td class="editable" onclick="hacerEditable(this, ${s.id}, 'direccion')">${s.direccion}</td>
+              <td class="editable" onclick="hacerEditable(this, ${s.id}, 'fecha_suscripcion')">${s.fecha_suscripcion}</td>
+              <td>
+                <button onclick="editarSuscriptor(${s.id})" class="btn-small">Editar</button>
+                <button onclick="eliminarSuscriptor(${s.id})" class="btn-small btn-delete">Eliminar</button>
+              </td>
+            </tr>
+          `;
+          tbody.innerHTML += row;
+        });
+      }
+
+      async function eliminarSuscriptor(id) {
+        if (confirm('¿Está seguro de que desea eliminar este suscriptor?')) {
+          try {
+            const response = await fetch(`${API_BASE}/suscriptores/${id}`, {
+              method: 'DELETE',
+              headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+              alert('Suscriptor eliminado exitosamente');
+              listarSuscriptores();
+            } else {
+              alert('Error al eliminar suscriptor');
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            alert('Error al eliminar suscriptor');
+          }
+        }
+      }
+
+      async function editarSuscriptor(id) {
+        try {
+          const response = await fetch(`${API_BASE}/suscriptores/${id}`, {
+              method: 'PUT',
+              headers: getAuthHeaders(),
+              body: JSON.stringify({
+                numero_contrato: document.getElementById(`numero_contrato_${id}`).value,
+                cedula: document.getElementById(`cedula_${id}`).value,
+                nombre_completo: document.getElementById(`nombre_${id}`).value,
+                email: document.getElementById(`email_${id}`).value,
+                telefono: document.getElementById(`telefono_${id}`).value,
+                direccion: document.getElementById(`direccion_${id}`).value,
+                fecha_suscripcion: document.getElementById(`fecha_${id}`).value
+              })
+          });
+
+          if (response.ok) {
+            alert('Suscriptor actualizado exitosamente');
+            listarSuscriptores();
+          } else {
+            alert('Error al actualizar suscriptor');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error al actualizar suscriptor');
+          }
+      }
+
+      async function buscarPorSuscriptorId() {
+        const suscriptorId = document.getElementById('buscar-suscriptor-id').value;
+        if (suscriptorId) {
+          try {
+            const response = await fetch(`${API_BASE}/suscriptores/${suscriptorId}`, {
+              headers: getAuthHeaders()
+            });
+            const suscriptor = await response.json();
+            
+            if (response.ok) {
+              // Mostrar información directamente sin pop-up
+              document.getElementById('pago_suscriptor_id').value = suscriptorId;
+              document.getElementById('pago_suscriptor_nombre').textContent = suscriptor.nombre_completo;
+              document.getElementById('pago_suscriptor_email').textContent = suscriptor.email;
+              document.getElementById('pago_suscriptor_cedula').textContent = suscriptor.cedula;
+              
+              // Mostrar la información del suscriptor
+              document.getElementById('info-suscriptor').style.display = 'block';
+            } else {
+              alert('Suscriptor no encontrado');
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            alert('Error al buscar suscriptor');
+          }
+        }
+      }
+
+      async function listarPagos() {
+        try {
+          const response = await fetch(`${API_BASE}/pagos`, {
+            headers: getAuthHeaders()
+          });
+          pagosData = await response.json();
+          mostrarPagos(pagosData);
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+
+      function mostrarPagos(pagos) {
+        const tbody = document.querySelector('#tabla-pagos tbody');
+        tbody.innerHTML = '';
+        pagos.forEach(p => {
+          const row = `
+            <tr>
+              <td>${p.id}</td>
+              <td>${p.suscriptor_id}</td>
+              <td>${p.mes}</td>
+              <td>${p.anio}</td>
+              <td>${p.fecha_pago || 'N/A'}</td>
+              <td>$${p.valor.toFixed(2)}</td>
+              <td>${p.tipo_pago}</td>
+              <td>
+                <button onclick="eliminarPago(${p.id})" class="btn-small btn-delete">🗑️ Eliminar</button>
+              </td>
+            </tr>
+          `;
+          tbody.innerHTML += row;
+        });
+      }
+
+      async function eliminarPago(id) {
+        if (confirm('¿Está seguro de que desea eliminar este pago?')) {
+          try {
+            const response = await fetch(`${API_BASE}/pagos/${id}`, {
+              method: 'DELETE',
+              headers: getAuthHeaders()
+            });
+            if (response.ok) {
+              alert('Pago eliminado exitosamente');
+              listarPagos();
+            } else {
+              const error = await response.json();
+              alert(`Error: ${error.detail || 'Error desconocido'}`);
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            alert('Error al eliminar pago');
+          }
+        }
+      }
+
+      async function listarGastos() {
+        try {
+          const response = await fetch(`${API_BASE}/gastos`, {
+            headers: getAuthHeaders()
+          });
+          gastosData = await response.json();
+          mostrarGastos(gastosData);
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+
+      function mostrarGastos(gastos) {
+        const tbody = document.querySelector('#tabla-gastos tbody');
+        tbody.innerHTML = '';
+        gastos.forEach(g => {
+          const row = `
+            <tr>
+              <td>${g.id}</td>
+              <td>${g.tipo_gasto}</td>
+              <td>${g.descripcion}</td>
+              <td>$${g.valor.toFixed(2)}</td>
+              <td>${g.fecha}</td>
+              <td>${g.lugar_compra || '-'}</td>
+              <td>
+                <button onclick="eliminarGasto(${g.id})" class="btn-small btn-delete">🗑️ Eliminar</button>
+              </td>
+            </tr>
+          `;
+          tbody.innerHTML += row;
+        });
+      }
+
+      async function eliminarGasto(id) {
+        if (confirm('¿Está seguro de que desea eliminar este gasto?')) {
+          try {
+            const response = await fetch(`${API_BASE}/gastos/${id}`, {
+              method: 'DELETE',
+              headers: getAuthHeaders()
+            });
+            if (response.ok) {
+              alert('Gasto eliminado exitosamente');
+              listarGastos();
+            } else {
+              const error = await response.json();
+              alert(`Error: ${error.detail || 'Error desconocido'}`);
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            alert('Error al eliminar gasto');
+          }
+        }
+      }
+
+      async function obtenerBalance() {
+        try {
+          const response = await fetch(`${API_BASE}/balance`, {
+            headers: getAuthHeaders()
+          });
+          const balance = await response.json();
+          const resultDiv = document.getElementById('balance-result');
+          resultDiv.innerHTML = `
+            <p><strong>Total Ingresos:</strong> $${balance.total_ingresos.toFixed(2)}</p>
+            <p><strong>Total Gastos:</strong> $${balance.total_gastos.toFixed(2)}</p>
+            <p><strong>Balance Total:</strong> $${balance.balance_total.toFixed(2)}</p>
+          `;
+
+          // Cargar tablas de resumen
+          cargarResumenIngresos();
+          cargarResumenGastos();
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+
+      async function cargarResumenIngresos() {
+        try {
+          const response = await fetch(`${API_BASE}/ingresos`, {
+            headers: getAuthHeaders()
+          });
+          const ingresos = await response.json();
+          const tbody = document.querySelector('#tabla-ingresos tbody');
+          tbody.innerHTML = '';
+          ingresos.forEach(i => {
+            const row = `
+              <tr>
+                <td>${i.id}</td>
+                <td>$${i.monto.toFixed(2)}</td>
+                <td>${i.fecha}</td>
+                <td>${i.origen}</td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+
+      async function cargarResumenGastos() {
+        try {
+          const response = await fetch(`${API_BASE}/gastos`, {
+            headers: getAuthHeaders()
+          });
+          const gastos = await response.json();
+          const tbody = document.querySelector('#tabla-gastos-resumen tbody');
+          tbody.innerHTML = '';
+          gastos.forEach(g => {
+            const row = `
+              <tr>
+                <td>${g.id}</td>
+                <td>${g.tipo_gasto}</td>
+                <td>${g.descripcion}</td>
+                <td>$${g.valor.toFixed(2)}</td>
+                <td>${g.fecha}</td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+    </script>
+  </body>
+</html>

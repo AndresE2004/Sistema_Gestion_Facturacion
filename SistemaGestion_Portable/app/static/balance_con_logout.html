@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sistema de Balance</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width: 1200px; margin: 20px auto; line-height: 1.5; color:#222; background:#f9f9f9 }
+      h1 { color:#0a4f7a; text-align:center }
+      .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      .user-info { display: flex; align-items: center; gap: 15px; }
+      .user-info span { font-weight: bold; color: #0a4f7a; }
+      .btn-logout { 
+        background: #dc3545; 
+        color: white; 
+        padding: 8px 15px; 
+        border: none; 
+        border-radius: 4px; 
+        cursor: pointer; 
+        font-weight: bold;
+        transition: all 0.3s ease;
+      }
+      .btn-logout:hover { 
+        background: #c82333; 
+        transform: scale(1.05);
+      }
+      .card { background:white; border:1px solid #ddd; padding:20px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 4px rgba(0,0,0,0.1) }
+      button { 
+        padding:8px; 
+        border:1px solid #ccc; 
+        border-radius:4px; 
+        background:#0a4f7a; 
+        color:white; 
+        border:none; 
+        cursor:pointer; 
+        margin-top:10px;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+      }
+      button:hover { background:#084f6a }
+      .result { margin-top:15px; padding:10px; background:#e8f5e8; border:1px solid #4caf50; border-radius:4px; display:none }
+      .error { background:#ffebee; border-color:#f44336 }
+      table { width:100%; border-collapse:collapse; margin-top:15px }
+      th, td { border:1px solid #ddd; padding:8px; text-align:left }
+      th { background:#f2f2f2 }
+      .balance-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }
+      .balance-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
+      .balance-card h3 { margin: 0 0 10px 0; color: #333; }
+      .balance-card .amount { font-size: 24px; font-weight: bold; }
+      .income { color: #28a745; }
+      .expense { color: #dc3545; }
+      .total { color: #0a4f7a; }
+      .nav-buttons { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+      .nav-buttons button { background: #28a745; padding: 10px 20px; border-radius: 5px; }
+      .nav-buttons button:hover { background: #218838; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Sistema de Balance</h1>
+      <div class="user-info">
+        <button onclick="logout()" class="btn-logout">🚪 Cerrar Sesión</button>
+      </div>
+    </div>
+
+    <!-- Botón flotante de cerrar sesión -->
+    <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+      <button onclick="logout()" style="background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+        🚪 Cerrar Sesión
+      </button>
+    </div>
+
+    <!-- Navegación -->
+    <div class="nav-buttons">
+      <button onclick="window.location.href='/ui/mejorado_con_auth.html'">🏠 Inicio</button>
+      <button onclick="window.location.href='/ui/index_con_logout.html'">👥 Suscriptores</button>
+      <button onclick="window.location.href='/ui/pagos_con_logout.html'">💳 Pagos</button>
+      <button onclick="window.location.href='/ui/gastos_con_logout.html'">💸 Gastos</button>
+    </div>
+
+    <div class="card">
+      <h3>Balance General</h3>
+      <button onclick="obtenerBalance()">🔄 Actualizar Balance</button>
+      <div id="balance-result"></div>
+    </div>
+
+    <div class="balance-summary" id="balance-summary">
+      <div class="balance-card">
+        <h3>💰 Total Ingresos</h3>
+        <div class="amount income" id="total-ingresos">$0.00</div>
+      </div>
+      <div class="balance-card">
+        <h3>💸 Total Gastos</h3>
+        <div class="amount expense" id="total-gastos">$0.00</div>
+      </div>
+      <div class="balance-card">
+        <h3>📊 Balance Total</h3>
+        <div class="amount total" id="balance-total">$0.00</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Resumen de Ingresos</h3>
+      <table id="tabla-ingresos">
+        <thead>
+          <tr><th>ID</th><th>Monto</th><th>Fecha</th><th>Origen</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Resumen de Gastos</h3>
+      <table id="tabla-gastos-resumen">
+        <thead>
+          <tr><th>ID</th><th>Tipo</th><th>Descripción</th><th>Valor</th><th>Fecha</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <script>
+      const API_BASE = window.location.origin;
+
+      // Verificar autenticación
+      window.onload = () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          window.location.href = '/ui/login.html';
+        }
+        obtenerBalance();
+      };
+
+      function logout() {
+        if (confirm('¿Está seguro de que desea cerrar sesión?')) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/ui/login.html';
+        }
+      }
+
+      function getAuthHeaders() {
+        const token = localStorage.getItem('token');
+        return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+      }
+
+      async function obtenerBalance() {
+        try {
+          const response = await fetch(`${API_BASE}/balance`, {
+            headers: getAuthHeaders()
+          });
+          const balance = await response.json();
+          
+          // Actualizar tarjetas de resumen
+          document.getElementById('total-ingresos').textContent = `$${balance.total_ingresos.toFixed(2)}`;
+          document.getElementById('total-gastos').textContent = `$${balance.total_gastos.toFixed(2)}`;
+          document.getElementById('balance-total').textContent = `$${balance.balance_total.toFixed(2)}`;
+          
+          // Actualizar resultado detallado
+          const resultDiv = document.getElementById('balance-result');
+          resultDiv.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+              <div style="background: #d4edda; padding: 15px; border-radius: 5px; border-left: 4px solid #28a745;">
+                <strong>Total Ingresos:</strong> $${balance.total_ingresos.toFixed(2)}
+              </div>
+              <div style="background: #f8d7da; padding: 15px; border-radius: 5px; border-left: 4px solid #dc3545;">
+                <strong>Total Gastos:</strong> $${balance.total_gastos.toFixed(2)}
+              </div>
+              <div style="background: #d1ecf1; padding: 15px; border-radius: 5px; border-left: 4px solid #0a4f7a;">
+                <strong>Balance Total:</strong> $${balance.balance_total.toFixed(2)}
+              </div>
+            </div>
+          `;
+
+          // Cargar tablas de resumen
+          cargarResumenIngresos();
+          cargarResumenGastos();
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+
+      async function cargarResumenIngresos() {
+        try {
+          const response = await fetch(`${API_BASE}/ingresos`, {
+            headers: getAuthHeaders()
+          });
+          const ingresos = await response.json();
+          const tbody = document.querySelector('#tabla-ingresos tbody');
+          tbody.innerHTML = '';
+          ingresos.forEach(i => {
+            const row = `
+              <tr>
+                <td>${i.id}</td>
+                <td>$${i.monto.toFixed(2)}</td>
+                <td>${i.fecha}</td>
+                <td>${i.origen}</td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+
+      async function cargarResumenGastos() {
+        try {
+          const response = await fetch(`${API_BASE}/gastos`, {
+            headers: getAuthHeaders()
+          });
+          const gastos = await response.json();
+          const tbody = document.querySelector('#tabla-gastos-resumen tbody');
+          tbody.innerHTML = '';
+          gastos.forEach(g => {
+            const row = `
+              <tr>
+                <td>${g.id}</td>
+                <td>${g.tipo_gasto}</td>
+                <td>${g.descripcion}</td>
+                <td>$${g.valor.toFixed(2)}</td>
+                <td>${g.fecha}</td>
+              </tr>
+            `;
+            tbody.innerHTML += row;
+          });
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+    </script>
+  </body>
+</html>

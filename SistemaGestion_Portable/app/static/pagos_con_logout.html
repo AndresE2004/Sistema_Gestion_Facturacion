@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sistema de Pagos</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width: 1200px; margin: 20px auto; line-height: 1.5; color:#222; background:#f9f9f9 }
+      h1 { color:#0a4f7a; text-align:center }
+      .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      .user-info { display: flex; align-items: center; gap: 15px; }
+      .user-info span { font-weight: bold; color: #0a4f7a; }
+      .btn-logout { 
+        background: #dc3545; 
+        color: white; 
+        padding: 8px 15px; 
+        border: none; 
+        border-radius: 4px; 
+        cursor: pointer; 
+        font-weight: bold;
+        transition: all 0.3s ease;
+      }
+      .btn-logout:hover { 
+        background: #c82333; 
+        transform: scale(1.05);
+      }
+      .card { background:white; border:1px solid #ddd; padding:20px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 4px rgba(0,0,0,0.1) }
+      .form-group { margin-bottom:15px }
+      label { display:block; margin-bottom:5px; font-weight:bold }
+      input, select, button { 
+        padding:8px; 
+        border:1px solid #ccc; 
+        border-radius:4px; 
+        width:100%; 
+        box-sizing:border-box;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+      }
+      button { background:#0a4f7a; color:white; border:none; cursor:pointer; margin-top:10px }
+      button:hover { background:#084f6a }
+      .result { margin-top:15px; padding:10px; background:#e8f5e8; border:1px solid #4caf50; border-radius:4px; display:none }
+      .error { background:#ffebee; border-color:#f44336 }
+      table { width:100%; border-collapse:collapse; margin-top:15px }
+      th, td { border:1px solid #ddd; padding:8px; text-align:left }
+      th { background:#f2f2f2 }
+      .search-box { margin-bottom:15px; padding:10px; background:#f0f0f0; border-radius:4px }
+      .search-box input { width:300px; display:inline-block }
+      .btn-small { padding:4px 8px; font-size:12px; margin:2px }
+      .btn-delete { background:#f44336 }
+      .nav-buttons { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+      .nav-buttons button { background: #28a745; padding: 10px 20px; border-radius: 5px; }
+      .nav-buttons button:hover { background: #218838; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Sistema de Pagos</h1>
+      <div class="user-info">
+        <button onclick="logout()" class="btn-logout">🚪 Cerrar Sesión</button>
+      </div>
+    </div>
+
+    <!-- Botón flotante de cerrar sesión -->
+    <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+      <button onclick="logout()" style="background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+        🚪 Cerrar Sesión
+      </button>
+    </div>
+
+    <!-- Navegación -->
+    <div class="nav-buttons">
+      <button onclick="window.location.href='/ui/mejorado_con_auth.html'">🏠 Inicio</button>
+      <button onclick="window.location.href='/ui/index_con_logout.html'">👥 Suscriptores</button>
+      <button onclick="window.location.href='/ui/gastos_con_logout.html'">💸 Gastos</button>
+      <button onclick="window.location.href='/ui/balance_con_logout.html'">📊 Balance</button>
+    </div>
+
+    <div class="card">
+      <h3>Registrar Pago</h3>
+      <form id="form-pago">
+        <div class="form-group">
+          <label>ID del Suscriptor:</label>
+          <input type="number" id="suscriptor_id" required>
+        </div>
+        <div class="form-group">
+          <label>Mes:</label>
+          <select id="mes" required onchange="togglePagoFields()">
+            <option value="">Seleccionar mes</option>
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+            <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Año:</label>
+          <input type="number" id="anio" min="2000" max="2100" required>
+        </div>
+        <div class="form-group">
+          <label>Fecha de Pago:</label>
+          <input type="date" id="fecha_pago" required>
+        </div>
+        <div class="form-group">
+          <label>Valor:</label>
+          <input type="number" step="0.01" id="valor" required>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Pago:</label>
+          <select id="tipo_pago" required onchange="togglePagoFields()">
+            <option value="">Seleccionar tipo</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+        </div>
+        <div id="campos-efectivo" style="display:none">
+          <div class="form-group">
+            <label>Monto en Efectivo:</label>
+            <input type="number" step="0.01" id="monto_efectivo">
+          </div>
+        </div>
+        <div id="campos-transferencia" style="display:none">
+          <div class="form-group">
+            <label>Entidad Bancaria:</label>
+            <input type="text" id="entidad_bancaria">
+          </div>
+          <div class="form-group">
+            <label>Nombre del Transferente:</label>
+            <input type="text" id="nombre_transferente">
+          </div>
+        </div>
+        <button type="submit">Registrar Pago</button>
+      </form>
+      <div id="result-pago" class="result"></div>
+    </div>
+
+    <div class="card">
+      <h3>Listar Pagos</h3>
+      <div class="search-box">
+        <input type="text" id="buscar-pago" placeholder="Buscar pagos..." onkeyup="buscarPagos()">
+        <button onclick="listarPagos()" style="width:auto; display:inline-block">🔄 Actualizar</button>
+      </div>
+      <table id="tabla-pagos">
+        <thead>
+          <tr><th>ID</th><th>ID Suscriptor</th><th>Mes</th><th>Año</th><th>Fecha</th><th>Valor</th><th>Tipo</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <script>
+      const API_BASE = window.location.origin;
+      let pagosData = [];
+
+      // Verificar autenticación
+      window.onload = () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          window.location.href = '/ui/login.html';
+        }
+      };
+
+      function logout() {
+        if (confirm('¿Está seguro de que desea cerrar sesión?')) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/ui/login.html';
+        }
+      }
+
+      function getAuthHeaders() {
+        const token = localStorage.getItem('token');
+        return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+      }
+
+      function togglePagoFields() {
+        const tipo = document.getElementById('tipo_pago').value;
+        document.getElementById('campos-efectivo').style.display = tipo === 'efectivo' ? 'block' : 'none';
+        document.getElementById('campos-transferencia').style.display = tipo === 'transferencia' ? 'block' : 'none';
+      }
+
+      function buscarPagos() {
+        const texto = document.getElementById('buscar-pago').value.toLowerCase();
+        const filtrados = pagosData.filter(p => 
+          p.suscriptor_id.toString().includes(texto) ||
+          p.tipo_pago.toLowerCase().includes(texto) ||
+          p.valor.toString().includes(texto)
+        );
+        mostrarPagos(filtrados);
+      }
+
+      document.getElementById('form-pago').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tipo = document.getElementById('tipo_pago').value;
+        const data = {
+          suscriptor_id: parseInt(document.getElementById('suscriptor_id').value),
+          mes: parseInt(document.getElementById('mes').value),
+          anio: parseInt(document.getElementById('anio').value),
+          fecha_pago: document.getElementById('fecha_pago').value,
+          valor: parseFloat(document.getElementById('valor').value),
+          tipo_pago: tipo
+        };
+        if (tipo === 'efectivo') {
+          data.monto_efectivo = parseFloat(document.getElementById('monto_efectivo').value);
+        } else if (tipo === 'transferencia') {
+          data.entidad_bancaria = document.getElementById('entidad_bancaria').value;
+          data.nombre_transferente = document.getElementById('nombre_transferente').value;
+        }
+        try {
+          const response = await fetch(`${API_BASE}/pagos`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+          });
+          const result = await response.json();
+          const resultDiv = document.getElementById('result-pago');
+          if (response.ok) {
+            resultDiv.textContent = 'Pago registrado exitosamente!';
+            resultDiv.classList.remove('error');
+            document.getElementById('form-pago').reset();
+            listarPagos();
+          } else {
+            resultDiv.textContent = `Error: ${result.detail || 'Error desconocido'}`;
+            resultDiv.classList.add('error');
+          }
+          resultDiv.style.display = 'block';
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      });
+
+      async function listarPagos() {
+        try {
+          const response = await fetch(`${API_BASE}/pagos`, {
+            headers: getAuthHeaders()
+          });
+          pagosData = await response.json();
+          mostrarPagos(pagosData);
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+
+      function mostrarPagos(pagos) {
+        const tbody = document.querySelector('#tabla-pagos tbody');
+        tbody.innerHTML = '';
+        pagos.forEach(p => {
+          const row = `
+            <tr>
+              <td>${p.id}</td>
+              <td>${p.suscriptor_id}</td>
+              <td>${p.mes}</td>
+              <td>${p.anio}</td>
+              <td>${p.fecha_pago}</td>
+              <td>$${p.valor.toFixed(2)}</td>
+              <td>${p.tipo_pago}</td>
+            </tr>
+          `;
+          tbody.innerHTML += row;
+        });
+      }
+
+      // Cargar datos iniciales
+      listarPagos();
+    </script>
+  </body>
+</html>

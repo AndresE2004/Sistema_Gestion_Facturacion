@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sistema de Suscriptores</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width: 1200px; margin: 20px auto; line-height: 1.5; color:#222; background:#f9f9f9 }
+      h1 { color:#0a4f7a; text-align:center }
+      .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      .user-info { display: flex; align-items: center; gap: 15px; }
+      .user-info span { font-weight: bold; color: #0a4f7a; }
+      .btn-logout { 
+        background: #dc3545; 
+        color: white; 
+        padding: 8px 15px; 
+        border: none; 
+        border-radius: 4px; 
+        cursor: pointer; 
+        font-weight: bold;
+        transition: all 0.3s ease;
+      }
+      .btn-logout:hover { 
+        background: #c82333; 
+        transform: scale(1.05);
+      }
+      .card { background:white; border:1px solid #ddd; padding:20px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 4px rgba(0,0,0,0.1) }
+      .form-group { margin-bottom:15px }
+      label { display:block; margin-bottom:5px; font-weight:bold }
+      input, select, button { 
+        padding:8px; 
+        border:1px solid #ccc; 
+        border-radius:4px; 
+        width:100%; 
+        box-sizing:border-box;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+      }
+      button { background:#0a4f7a; color:white; border:none; cursor:pointer; margin-top:10px }
+      button:hover { background:#084f6a }
+      .result { margin-top:15px; padding:10px; background:#e8f5e8; border:1px solid #4caf50; border-radius:4px; display:none }
+      .error { background:#ffebee; border-color:#f44336 }
+      table { width:100%; border-collapse:collapse; margin-top:15px }
+      th, td { border:1px solid #ddd; padding:8px; text-align:left }
+      th { background:#f2f2f2 }
+      .tabs { display:flex; margin-bottom:20px }
+      .tab { flex:1; padding:10px; background:#ddd; cursor:pointer; text-align:center; border-radius:4px 4px 0 0 }
+      .tab.active { background:#0a4f7a; color:white }
+      .tab-content { display:none }
+      .tab-content.active { display:block }
+      .search-box { margin-bottom:15px; padding:10px; background:#f0f0f0; border-radius:4px }
+      .search-box input { width:300px; display:inline-block }
+      .editable { background:#fff3cd; cursor:pointer; padding:2px 4px; border-radius:2px }
+      .editable:hover { background:#ffeaa7 }
+      .edit-input { width:100%; padding:4px; border:1px solid #007bff; border-radius:2px }
+      .btn-small { padding:4px 8px; font-size:12px; margin:2px }
+      .btn-edit { background:#ff9800 }
+      .btn-save { background:#4caf50 }
+      .btn-cancel { background:#f44336 }
+      .btn-delete { background:#f44336 }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Sistema de Gestión de Suscriptores</h1>
+      <div class="user-info">
+        <button onclick="logout()" class="btn-logout">🚪 Cerrar Sesión</button>
+      </div>
+    </div>
+
+    <!-- Botón flotante de cerrar sesión -->
+    <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+      <button onclick="logout()" style="background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+        🚪 Cerrar Sesión
+      </button>
+    </div>
+
+    <div class="card">
+      <h3>Crear Suscriptor</h3>
+      <form id="form-suscriptor">
+        <div class="form-group">
+          <label>Número de Contrato:</label>
+          <input type="text" id="numero_contrato" required>
+        </div>
+        <div class="form-group">
+          <label>Cédula:</label>
+          <input type="text" id="cedula" required>
+        </div>
+        <div class="form-group">
+          <label>Nombre Completo:</label>
+          <input type="text" id="nombre_completo" required>
+        </div>
+        <div class="form-group">
+          <label>Fecha de Suscripción:</label>
+          <input type="date" id="fecha_suscripcion" required>
+        </div>
+        <button type="submit">Crear Suscriptor</button>
+      </form>
+      <div id="result-suscriptor" class="result"></div>
+    </div>
+
+    <div class="card">
+      <h3>Listar Suscriptores</h3>
+      <div class="search-box">
+        <input type="text" id="buscar-suscriptor" placeholder="Buscar por nombre, cédula o contrato..." onkeyup="buscarSuscriptores()">
+        <button onclick="listarSuscriptores()" style="width:auto; display:inline-block">🔄 Actualizar</button>
+      </div>
+      <table id="tabla-suscriptores">
+        <thead>
+          <tr><th>ID</th><th>Contrato</th><th>Cédula</th><th>Nombre</th><th>Fecha</th><th>Acciones</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <script>
+      const API_BASE = window.location.origin;
+      let suscriptoresData = [];
+
+      // Verificar autenticación
+      window.onload = () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          window.location.href = '/ui/login.html';
+        }
+      };
+
+      function logout() {
+        if (confirm('¿Está seguro de que desea cerrar sesión?')) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/ui/login.html';
+        }
+      }
+
+      function getAuthHeaders() {
+        const token = localStorage.getItem('token');
+        return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+      }
+
+      // Funciones de búsqueda
+      function buscarSuscriptores() {
+        const texto = document.getElementById('buscar-suscriptor').value.toLowerCase();
+        const filtrados = suscriptoresData.filter(s => 
+          s.nombre_completo.toLowerCase().includes(texto) ||
+          s.cedula.toLowerCase().includes(texto) ||
+          s.numero_contrato.toLowerCase().includes(texto)
+        );
+        mostrarSuscriptores(filtrados);
+      }
+
+      // Funciones de edición inline
+      function hacerEditable(celda, id, campo, tipo = 'text') {
+        const valorActual = celda.textContent;
+        celda.innerHTML = `<input type="${tipo}" class="edit-input" value="${valorActual}" onblur="guardarEdicion(${id}, '${campo}', this.value)" onkeypress="if(event.key==='Enter') this.blur()">`;
+        celda.querySelector('input').focus();
+      }
+
+      async function guardarEdicion(id, campo, valor) {
+        try {
+          const response = await fetch(`${API_BASE}/suscriptores/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ [campo]: valor })
+          });
+          if (response.ok) {
+            listarSuscriptores();
+          } else {
+            alert('Error al actualizar');
+          }
+        } catch (error) {
+          alert('Error al actualizar');
+        }
+      }
+
+      // Formularios
+      document.getElementById('form-suscriptor').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+          numero_contrato: document.getElementById('numero_contrato').value,
+          cedula: document.getElementById('cedula').value,
+          nombre_completo: document.getElementById('nombre_completo').value,
+          fecha_suscripcion: document.getElementById('fecha_suscripcion').value
+        };
+        try {
+          const response = await fetch(`${API_BASE}/suscriptores`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+          });
+          const result = await response.json();
+          const resultDiv = document.getElementById('result-suscriptor');
+          if (response.ok) {
+            resultDiv.textContent = 'Suscriptor creado exitosamente!';
+            resultDiv.classList.remove('error');
+            document.getElementById('form-suscriptor').reset();
+            listarSuscriptores();
+          } else {
+            resultDiv.textContent = `Error: ${result.detail || 'Error desconocido'}`;
+            resultDiv.classList.add('error');
+          }
+          resultDiv.style.display = 'block';
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      });
+
+      // Funciones de listado
+      async function listarSuscriptores() {
+        try {
+          const response = await fetch(`${API_BASE}/suscriptores`, {
+            headers: getAuthHeaders()
+          });
+          suscriptoresData = await response.json();
+          mostrarSuscriptores(suscriptoresData);
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+
+      function mostrarSuscriptores(suscriptores) {
+        const tbody = document.querySelector('#tabla-suscriptores tbody');
+        tbody.innerHTML = '';
+        suscriptores.forEach(s => {
+          const row = `
+            <tr>
+              <td>${s.id}</td>
+              <td class="editable" onclick="hacerEditable(this, ${s.id}, 'numero_contrato')">${s.numero_contrato}</td>
+              <td class="editable" onclick="hacerEditable(this, ${s.id}, 'cedula')">${s.cedula}</td>
+              <td class="editable" onclick="hacerEditable(this, ${s.id}, 'nombre_completo')">${s.nombre_completo}</td>
+              <td class="editable" onclick="hacerEditable(this, ${s.id}, 'fecha_suscripcion', 'date')">${s.fecha_suscripcion}</td>
+              <td>
+                <button onclick="eliminarSuscriptor(${s.id})" class="btn-small btn-delete">🗑️ Eliminar</button>
+              </td>
+            </tr>
+          `;
+          tbody.innerHTML += row;
+        });
+      }
+
+      async function eliminarSuscriptor(id) {
+        if (confirm('¿Está seguro de que desea eliminar este suscriptor?')) {
+          try {
+            const response = await fetch(`${API_BASE}/suscriptores/${id}`, {
+              method: 'DELETE',
+              headers: getAuthHeaders()
+            });
+            if (response.ok) {
+              alert('Suscriptor eliminado exitosamente');
+              listarSuscriptores();
+            } else {
+              const error = await response.json();
+              alert(`Error: ${error.detail || 'Error desconocido'}`);
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            alert('Error al eliminar suscriptor');
+          }
+        }
+      }
+
+      // Cargar datos iniciales
+      listarSuscriptores();
+    </script>
+  </body>
+</html>

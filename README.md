@@ -77,7 +77,7 @@ Padre/
 
 Ejecuta `INICIAR.bat` para iniciar el sistema automáticamente en Windows.
 
-## 📱 Interfaz de Usuario
+##  Interfaz de Usuario
 
 La aplicación incluye una interfaz web completa con:
 
@@ -97,7 +97,7 @@ La aplicación incluye una interfaz web completa con:
 - **Validación Automática**: Verificación de datos antes de guardar
 - **Sin Pop-ups**: Información mostrada directamente en la interfaz
 
-## 🔌 Endpoints Principales
+##  Endpoints Principales
 
 ### Autenticación
 
